@@ -90,6 +90,43 @@ select, input[type="range"] {
     margin-top: 20px;
 }
 
+/* Start/Pause Button */
+#start-pause-btn {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 80px;
+    height: 80px;
+    font-size: 2.5rem;
+    color: white;
+    background-color: rgba(52, 152, 219, 0.8);
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    z-index: 10;
+}
+
+#start-pause-btn:hover {
+    background-color: rgba(41, 128, 185, 1);
+}
+
+#start-pause-btn.paused {
+    background-color: rgba(231, 76, 60, 0.8);
+}
+
+#start-pause-btn.paused:hover {
+    background-color: rgba(192, 57, 43, 1);
+}
+
+/* Game Paused State */
+.game-paused .letter {
+    animation-play-state: paused !important;
+    transition: none; /* Disable transition during pause */
+}
+
+
 /* Letter Styling */
 .letter {
     position: absolute;
@@ -107,6 +144,20 @@ select, input[type="range"] {
 
 .letter:hover {
     transform: scale(1.1);
+}
+
+.letter.falling {
+    animation-name: fall;
+    animation-timing-function: linear;
+}
+
+@keyframes fall {
+    from {
+        transform: translateY(0);
+    }
+    to {
+        transform: translateY(calc(50vh + 100px)); /* 50vh game area + 100px to clear the screen */
+    }
 }
 
 /* Media Query for smaller screens (e.g., phones) */

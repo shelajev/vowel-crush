@@ -5,6 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const mistakesDisplay = document.getElementById('mistakes');
     const gameModeSelect = document.getElementById('game-mode');
     const speedSlider = document.getElementById('speed-slider');
+    const startPauseBtn = document.getElementById('start-pause-btn');
 
     // Game State
     let score = 0;
@@ -12,6 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let gameMode = 'vowels'; // 'vowels' or 'consonants'
     let speed = 3; // Corresponds to slider value
     let gameInterval;
+    let isGamePaused = true;
 
     // Alphabets and Vowels
     const VOWELS = ['A', 'E', 'I', 'O', 'U', 'Õ', 'Ä', 'Ö', 'Ü'];
@@ -19,6 +21,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const ALPHABET = [...VOWELS, ...CONSONANTS];
 
     // --- Event Listeners ---
+
+    // Start/Pause Button
+    startPauseBtn.addEventListener('click', () => {
+        if (isGamePaused) {
+            startGame();
+        } else {
+            pauseGame();
+        }
+    });
 
     // Game Mode Change
     gameModeSelect.addEventListener('change', (e) => {
@@ -29,16 +40,18 @@ document.addEventListener('DOMContentLoaded', () => {
     // Speed Change
     speedSlider.addEventListener('input', (e) => {
         speed = parseInt(e.target.value, 10);
-        // Adjust game loop speed without a full reset
-        clearInterval(gameInterval);
-        startGame();
+        if (!isGamePaused) {
+            // Adjust game loop speed without a full reset
+            clearInterval(gameInterval);
+            startGame();
+        }
     });
 
     // --- Game Logic ---
 
     function createLetter() {
         const letter = document.createElement('div');
-        letter.classList.add('letter');
+        letter.classList.add('letter', 'falling');
         
         const char = ALPHABET[Math.floor(Math.random() * ALPHABET.length)];
         letter.textContent = char;
@@ -51,7 +64,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         letter.style.left = `${startX}px`;
         letter.style.top = '-50px'; // Start above the game area
-        letter.style.transition = `transform ${animationDuration}s linear`;
+        letter.style.animationDuration = `${animationDuration}s`;
+
 
         // Handle click/touch events
         const handleInteraction = () => {
@@ -64,12 +78,6 @@ document.addEventListener('DOMContentLoaded', () => {
         letter.addEventListener('touchstart', handleInteraction);
 
         gameArea.appendChild(letter);
-
-        // Start the animation
-        setTimeout(() => {
-            const endY = gameArea.clientHeight + 50;
-            letter.style.transform = `translateY(${endY}px)`;
-        }, 10);
 
         // Clean up letters that go off-screen
         setTimeout(() => {
@@ -100,7 +108,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // Visual feedback and removal
-        letterElement.style.transform += ' scale(1.2)';
+        letterElement.style.transform = 'scale(1.2)';
         setTimeout(() => {
             if (letterElement.parentElement) {
                 letterElement.remove();
@@ -113,16 +121,32 @@ document.addEventListener('DOMContentLoaded', () => {
         mistakes = 0;
         scoreDisplay.textContent = score;
         mistakesDisplay.textContent = mistakes;
-        gameArea.innerHTML = ''; // Clear all letters
+        
+        // Remove all letter elements, but keep the button
+        const letters = gameArea.querySelectorAll('.letter');
+        letters.forEach(letter => letter.remove());
+
         clearInterval(gameInterval);
-        startGame();
+        pauseGame(true); // Go to a paused state without toggling
     }
 
     function startGame() {
+        isGamePaused = false;
+        startPauseBtn.textContent = '❚❚';
+        startPauseBtn.classList.remove('start-btn');
+        startPauseBtn.classList.add('paused');
+        gameArea.classList.remove('game-paused');
+
         const intervalTime = 2000 / speed; // Faster speed = shorter interval
         gameInterval = setInterval(createLetter, intervalTime);
     }
 
-    // Initial start
-    startGame();
+    function pauseGame(isReset = false) {
+        isGamePaused = true;
+        startPauseBtn.textContent = '▶';
+        startPauseBtn.classList.add('start-btn');
+        startPauseBtn.classList.remove('paused');
+        gameArea.classList.add('game-paused');
+        clearInterval(gameInterval);
+    }
 });
