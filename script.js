@@ -3,15 +3,20 @@ document.addEventListener('DOMContentLoaded', () => {
     const gameArea = document.getElementById('game-area');
     const scoreDisplay = document.getElementById('score');
     const mistakesDisplay = document.getElementById('mistakes');
+    const levelDisplay = document.getElementById('level');
     const gameModeSelect = document.getElementById('game-mode');
     const speedSlider = document.getElementById('speed-slider');
     const startPauseBtn = document.getElementById('start-pause-btn');
 
     // Game State
     let score = 0;
-    let mistakes = 0;
+    let levelMistakes = 0;
+    let levelCorrect = 0;
+    let currentLevel = 1;
     let gameMode = 'vowels'; // 'vowels' or 'consonants'
-    let speed = 3; // Corresponds to slider value
+    const MIN_SPEED = 1;
+    const MAX_SPEED = 10;
+    let speed = parseInt(speedSlider.value, 10); // Corresponds to slider value
     let gameInterval;
     let isGamePaused = true;
 
@@ -19,6 +24,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const VOWELS = ['A', 'E', 'I', 'O', 'U', 'Õ', 'Ä', 'Ö', 'Ü'];
     const CONSONANTS = ['B', 'C', 'D', 'F', 'G', 'H', 'J', 'K', 'L', 'M', 'N', 'P', 'Q', 'R', 'S', 'Š', 'Z', 'Ž', 'T', 'V', 'W', 'X', 'Y'];
     const ALPHABET = [...VOWELS, ...CONSONANTS];
+    const LEVEL_GOAL = 15;
+    const LEVEL_MISTAKE_LIMIT = 3;
+    const LEVEL_COLORS = ['#f8b4c8', '#f9d29d', '#fcf7b4', '#c8edc3', '#b7d9f7', '#c3c3f9', '#e5c3f6'];
 
     // --- Event Listeners ---
 
@@ -39,12 +47,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Speed Change
     speedSlider.addEventListener('input', (e) => {
-        speed = parseInt(e.target.value, 10);
-        if (!isGamePaused) {
-            // Adjust game loop speed without a full reset
-            clearInterval(gameInterval);
-            startGame();
-        }
+        updateSpeed(parseInt(e.target.value, 10), false);
     });
 
     // --- Game Logic ---
@@ -55,6 +58,10 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const char = ALPHABET[Math.floor(Math.random() * ALPHABET.length)];
         letter.textContent = char;
+        const isVowel = VOWELS.includes(char.toUpperCase());
+        const shouldCatch = (gameMode === 'vowels' && isVowel) || (gameMode === 'consonants' && !isVowel);
+        letter.dataset.shouldCatch = shouldCatch ? 'true' : 'false';
+        letter.dataset.handled = 'false';
 
         // Set random starting position and animation duration
         const gameAreaWidth = gameArea.clientWidth;
@@ -65,10 +72,12 @@ document.addEventListener('DOMContentLoaded', () => {
         letter.style.left = `${startX}px`;
         letter.style.top = '-50px'; // Start above the game area
         letter.style.animationDuration = `${animationDuration}s`;
+        letter.style.animationPlayState = isGamePaused ? 'paused' : 'running';
 
 
         // Handle click/touch events
         const handleInteraction = () => {
+            letter.dataset.handled = 'true';
             checkHit(letter, char);
             letter.removeEventListener('mousedown', handleInteraction);
             letter.removeEventListener('touchstart', handleInteraction);
@@ -82,6 +91,9 @@ document.addEventListener('DOMContentLoaded', () => {
         // Clean up letters that go off-screen
         setTimeout(() => {
             if (letter.parentElement) {
+                if (letter.dataset.handled !== 'true' && letter.dataset.shouldCatch === 'true') {
+                    registerMistake();
+                }
                 letter.remove();
             }
         }, animationDuration * 1000);
@@ -98,13 +110,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (correctHit) {
-            score++;
-            scoreDisplay.textContent = score;
-            letterElement.style.backgroundColor = '#2ecc71'; // Green for correct
+            handleCorrectHit(letterElement);
         } else {
-            mistakes++;
-            mistakesDisplay.textContent = mistakes;
-            letterElement.style.backgroundColor = '#e74c3c'; // Red for incorrect
+            handleMistake(letterElement);
         }
 
         // Visual feedback and removal
@@ -118,16 +126,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function resetGame() {
         score = 0;
-        mistakes = 0;
+        levelCorrect = 0;
+        levelMistakes = 0;
+        currentLevel = 1;
         scoreDisplay.textContent = score;
-        mistakesDisplay.textContent = mistakes;
-        
-        // Remove all letter elements, but keep the button
-        const letters = gameArea.querySelectorAll('.letter');
-        letters.forEach(letter => letter.remove());
+        mistakesDisplay.textContent = levelMistakes;
+        levelDisplay.textContent = currentLevel;
 
-        clearInterval(gameInterval);
-        pauseGame(true); // Go to a paused state without toggling
+        clearLetters();
+        applyLevelTheme();
+
+        pauseGame();
     }
 
     function startGame() {
@@ -136,17 +145,124 @@ document.addEventListener('DOMContentLoaded', () => {
         startPauseBtn.classList.remove('start-btn');
         startPauseBtn.classList.add('paused');
         gameArea.classList.remove('game-paused');
+        setLetterAnimationState(false);
 
-        const intervalTime = 2000 / speed; // Faster speed = shorter interval
-        gameInterval = setInterval(createLetter, intervalTime);
+        startLetterInterval();
     }
 
-    function pauseGame(isReset = false) {
+    function pauseGame() {
         isGamePaused = true;
         startPauseBtn.textContent = '▶';
         startPauseBtn.classList.add('start-btn');
         startPauseBtn.classList.remove('paused');
         gameArea.classList.add('game-paused');
+        setLetterAnimationState(true);
         clearInterval(gameInterval);
     }
+
+    function handleCorrectHit(letterElement) {
+        score++;
+        levelCorrect++;
+        scoreDisplay.textContent = score;
+        letterElement.style.backgroundColor = '#2ecc71';
+
+        if (levelCorrect >= LEVEL_GOAL) {
+            advanceLevel();
+        }
+    }
+
+    function handleMistake(letterElement) {
+        registerMistake();
+        letterElement.style.backgroundColor = '#e74c3c';
+    }
+
+    function registerMistake() {
+        levelMistakes++;
+        mistakesDisplay.textContent = levelMistakes;
+        if (levelMistakes >= LEVEL_MISTAKE_LIMIT) {
+            restartLevel();
+        }
+    }
+
+    function restartLevel() {
+        adjustSpeed(-1);
+        resetLevelProgress();
+        clearLetters();
+    }
+
+    function advanceLevel() {
+        currentLevel++;
+        levelDisplay.textContent = currentLevel;
+        adjustSpeed(1);
+        resetLevelProgress();
+        clearLetters();
+        applyLevelTheme();
+    }
+
+    function resetLevelProgress() {
+        levelCorrect = 0;
+        levelMistakes = 0;
+        mistakesDisplay.textContent = levelMistakes;
+    }
+
+    function clearLetters() {
+        const letters = gameArea.querySelectorAll('.letter');
+        letters.forEach(letter => {
+            letter.dataset.handled = 'true';
+            letter.remove();
+        });
+    }
+
+    function setLetterAnimationState(paused) {
+        const state = paused ? 'paused' : 'running';
+        const letters = gameArea.querySelectorAll('.letter');
+        letters.forEach(letter => {
+            letter.style.animationPlayState = state;
+        });
+    }
+
+    function applyLevelTheme() {
+        const color = LEVEL_COLORS[(currentLevel - 1) % LEVEL_COLORS.length];
+        document.body.style.background = `linear-gradient(135deg, ${color} 0%, #ffffff 100%)`;
+        gameArea.style.background = hexToRgba(color, 0.45);
+    }
+
+    function hexToRgba(hex, alpha = 1) {
+        const sanitized = hex.replace('#', '');
+        const bigint = parseInt(sanitized, 16);
+        const r = (bigint >> 16) & 255;
+        const g = (bigint >> 8) & 255;
+        const b = bigint & 255;
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    }
+
+    function startLetterInterval() {
+        clearInterval(gameInterval);
+        const intervalTime = 2000 / speed; // Faster speed = shorter interval
+        gameInterval = setInterval(createLetter, intervalTime);
+    }
+
+    function restartLoopIfRunning() {
+        if (!isGamePaused) {
+            startLetterInterval();
+        }
+    }
+
+    function updateSpeed(newSpeed, syncSlider = true) {
+        const clamped = Math.max(MIN_SPEED, Math.min(MAX_SPEED, newSpeed));
+        if (speed === clamped) {
+            return;
+        }
+        speed = clamped;
+        if (syncSlider) {
+            speedSlider.value = speed;
+        }
+        restartLoopIfRunning();
+    }
+
+    function adjustSpeed(delta) {
+        updateSpeed(speed + delta);
+    }
+
+    applyLevelTheme();
 });

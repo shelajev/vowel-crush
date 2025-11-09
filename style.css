@@ -51,6 +51,10 @@ h1 {
     gap: 10px;
 }
 
+.button-group {
+    align-self: flex-start;
+}
+
 label {
     font-weight: bold;
 }
@@ -92,20 +96,16 @@ select, input[type="range"] {
 
 /* Start/Pause Button */
 #start-pause-btn {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 80px;
-    height: 80px;
-    font-size: 2.5rem;
+    width: 70px;
+    height: 70px;
+    font-size: 2rem;
     color: white;
     background-color: rgba(52, 152, 219, 0.8);
     border: none;
     border-radius: 50%;
     cursor: pointer;
     transition: all 0.3s ease;
-    z-index: 10;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
 }
 
 #start-pause-btn:hover {
@@ -169,6 +169,7 @@ select, input[type="range"] {
 
     .control-group {
         justify-content: space-between;
+        width: 100%;
     }
 
     .letter {
@@ -178,5 +179,11 @@ select, input[type="range"] {
 
     #game-area {
         height: 60vh;
+    }
+
+    #start-pause-btn {
+        width: 60px;
+        height: 60px;
+        font-size: 1.8rem;
     }
 }

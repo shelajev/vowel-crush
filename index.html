@@ -22,14 +22,17 @@
                     <label for="speed-slider">Speed:</label>
                     <input type="range" id="speed-slider" min="1" max="10" value="3">
                 </div>
+                <div class="control-group button-group">
+                    <button id="start-pause-btn" class="start-btn">▶</button>
+                </div>
             </div>
             <div class="score-container">
+                <p>Level: <span id="level">1</span></p>
                 <p>Score: <span id="score">0</span></p>
-                <p>Mistakes: <span id="mistakes">0</span></p>
+                <p>Level Mistakes: <span id="mistakes">0</span></p>
             </div>
         </header>
         <div id="game-area">
-            <button id="start-pause-btn" class="start-btn">▶</button>
         </div>
     </div>
     <script src="script.js"></script>
